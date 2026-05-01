@@ -32,11 +32,40 @@ in your system config (it usually is if you run any prebuilt binaries).
 
 ## Quickstart
 
+### Prebuilt binaries (recommended)
+
+Download the right binary for your OS from the [latest GitHub Actions build](../../actions/workflows/build.yml) (or [Releases](../../releases) on tagged versions):
+
+- `tmux-eyes-linux`
+- `tmux-eyes-windows.exe`
+- `tmux-eyes-macos`
+
+Single file, no Python needed. Just run it from inside a tmux or wezterm pane:
+
 ```bash
-cd /home/nixdt1/Repos/vectorise/tmux_eye_tracking
+chmod +x tmux-eyes-linux && ./tmux-eyes-linux        # Linux/macOS
+.\tmux-eyes-windows.exe                              # Windows (PowerShell)
+```
+
+Backend autodetection picks tmux or wezterm based on `$TMUX` / `$WEZTERM_PANE`.
+
+### From source (Linux/NixOS)
+
+```bash
+cd tmux_eye_tracking
 nix-shell                       # creates .venv and runs `uv sync` on first entry
 pytest                          # run the unit tests
 python -m tmux_eyes             # start the daemon
+```
+
+### From source (Windows)
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+pytest                          # 67/67 should pass
+python -m tmux_eyes             # start the daemon (run inside a wezterm pane)
 ```
 
 To watch the classification stream while debugging:
