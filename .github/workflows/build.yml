@@ -60,8 +60,60 @@ jobs:
           path: dist/${{ matrix.bin }}-${{ matrix.name }}${{ matrix.ext }}
           if-no-files-found: error
 
+  rust-build:
+    name: rust-${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  name: linux,   ext: '' }
+          - { os: windows-latest, name: windows, ext: '.exe' }
+          - { os: macos-latest,   name: macos,   ext: '' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Linux system deps (nokhwa + ORT)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libv4l-dev v4l-utils libudev-dev clang libclang-dev linux-headers-$(uname -r) pkg-config
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rs/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rs/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build release binary
+        working-directory: rs
+        run: cargo build --release
+
+      - name: Run tests
+        working-directory: rs
+        run: cargo test --release
+
+      - name: Rename
+        shell: bash
+        working-directory: rs
+        run: mv target/release/tmux-eyes${{ matrix.ext }} target/release/tmux-eyes-rs-${{ matrix.name }}${{ matrix.ext }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tmux-eyes-rs-${{ matrix.name }}
+          path: rs/target/release/tmux-eyes-rs-${{ matrix.name }}${{ matrix.ext }}
+          if-no-files-found: error
+
   release:
-    needs: build
+    needs: [build, rust-build]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

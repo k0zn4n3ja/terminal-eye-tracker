@@ -54,5 +54,10 @@ result-*
 *.log
 .cache/
 
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock.bk
+
 # OMC
 .omc/
