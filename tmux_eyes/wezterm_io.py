@@ -131,6 +131,8 @@ class WeztermClient:
                 ["wezterm", "cli", "list", "--format", "json"],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=2,
             )
         except FileNotFoundError as exc:
