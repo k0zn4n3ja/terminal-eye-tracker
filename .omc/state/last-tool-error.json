@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"nix-shell --run 'pytest tests/test_tmux_io.py -q 2>&1 | tail -30'\",\"timeout\":60000,\"description\":\"Run tmux_io tests to see what broke\"}",
-  "error": "Exit code 1\n[tmux-eyes] env ready. Run: python -m tmux_eyes  (or: pytest)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntmux_eyes/tmux_io.py:262: in _run_command\n    raise TmuxError(\nE   tmux_eyes.tmux_io.TmuxError: tmux stdout closed unexpectedly while waiting for %end.\n____________ TestHighLevelCommands.test_get_panes_returns_pane_info ____________\ntests/test_tmux_io.py:280: in test_get_panes_returns_pane_info\n    panes = client.get_panes()\n            ^^^^^^^^^^^^^^^^^^\ntmu...",
-  "timestamp": "2026-05-01T04:10:10.706Z",
-  "retry_count": 1
-}
