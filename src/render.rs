@@ -1,19 +1,29 @@
-//! GPU text renderer (M1).
+//! GPU text renderer (M1 → M2a).
 //!
-//! A wgpu surface plus a `glyphon` text renderer fed by `cosmic-text`. The
-//! M1 deliverable just paints a single hello string; later milestones will
-//! replace the static buffer with the live terminal grid.
+//! A wgpu surface plus a `glyphon` text renderer fed by `cosmic-text`.
+//! [`Renderer::render`] takes the current [`Grid`] and rebuilds the glyphon
+//! [`Buffer`] from its rows each frame: every cell's `ch` is concatenated
+//! row-by-row with `\n` separators, then handed to cosmic-text for shaping.
 //!
-//! Font fallback: we rely on system fonts via `cosmic-text`'s default
-//! `FontSystem`, which uses `fontdb` to scan `/usr/share/fonts`,
-//! `~/.local/share/fonts`, etc. If no monospace family is present the text
-//! still renders, but in whatever family `Family::Monospace` resolves to via
-//! fontdb's fallback chain. Bundling a default mono font (e.g. JetBrains
-//! Mono) is deferred to M2 polish.
+//! ## Why rebuild the buffer every frame?
 //!
-//! Headless / CI note: adapter acquisition can fail without a GPU. M1's
-//! verification only requires `cargo check` and `cargo clippy` — interactive
-//! smoke testing happens on a developer workstation.
+//! The simplest correct path: cosmic-text owns the line-layout, fallback,
+//! and glyph caching; we just push a fresh string each tick. Damage tracking
+//! (only re-shape changed rows) and per-cell colour application (CSI SGR)
+//! land in M2c.
+//!
+//! ## Font fallback
+//!
+//! We rely on system fonts via `cosmic-text`'s default [`FontSystem`], which
+//! uses `fontdb` to scan `/usr/share/fonts`, `~/.local/share/fonts`, etc.
+//! If no monospace family is present the text still renders, but in whatever
+//! family `Family::Monospace` resolves to via fontdb's fallback chain.
+//! Bundling a default mono font is M2 polish.
+//!
+//! ## Headless / CI note
+//!
+//! Adapter acquisition can fail without a GPU. The unit tests below cover
+//! the constants only; the live render path is exercised via `cargo run`.
 
 use std::sync::Arc;
 
@@ -26,9 +36,18 @@ use winit::dpi::PhysicalSize;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 
-const HELLO_TEXT: &str = "Hello, AI-first terminal.";
+use crate::grid::Grid;
+
 const FONT_SIZE: f32 = 16.0;
 const LINE_HEIGHT: f32 = 20.0;
+
+/// Inset (in pixels) so the text doesn't hug the window edge. Applied to
+/// both axes; the rest of the window is letterboxed in [`BACKGROUND`].
+const TEXT_INSET: f32 = 8.0;
+
+/// Foreground colour used for every cell in M2a — per-cell colours from
+/// CSI SGR land in M2c.
+const FG_COLOR: Color = Color::rgb(0xE6, 0xED, 0xF3);
 
 /// Background colour (R, G, B, A) — a near-black tuned for low contrast.
 const BACKGROUND: wgpu::Color = wgpu::Color {
@@ -37,26 +56,6 @@ const BACKGROUND: wgpu::Color = wgpu::Color {
     b: 0.08,
     a: 1.0,
 };
-
-/// Pure helper: compute the top-left pixel position of the hello string.
-///
-/// The renderer paints the string centred horizontally, with its top edge at
-/// roughly one third of the surface height. Extracted so the math is unit-
-/// testable without a GPU; the live `render` path forwards
-/// `(line_w, LINE_HEIGHT)` from `cosmic-text`'s shaped layout.
-///
-/// `text_extent` is `(width, height)` in pixels; only `width` is used today
-/// but `height` is accepted so M2's grid renderer can vertically centre
-/// without changing the signature.
-pub(crate) fn compute_hello_position(
-    surface: PhysicalSize<u32>,
-    text_extent: (f32, f32),
-) -> (f32, f32) {
-    let (line_w, _line_h) = text_extent;
-    let left = ((surface.width as f32 - line_w) / 2.0).max(0.0);
-    let top = surface.height as f32 / 3.0;
-    (left, top)
-}
 
 /// Owns the wgpu pipeline and the cosmic-text/glyphon stack used to paint a
 /// single frame.
@@ -138,20 +137,15 @@ impl Renderer {
         let text_renderer =
             TextRenderer::new(&mut atlas, &device, wgpu::MultisampleState::default(), None);
 
+        // The buffer starts empty; `render(grid)` populates it on every
+        // frame. We still need to size it so cosmic-text knows the wrap
+        // width; `resize` keeps that in sync with the swapchain.
         let mut text_buffer = Buffer::new(&mut font_system, Metrics::new(FONT_SIZE, LINE_HEIGHT));
         text_buffer.set_size(
             &mut font_system,
             Some(surface_config.width as f32),
             Some(surface_config.height as f32),
         );
-        text_buffer.set_text(
-            &mut font_system,
-            HELLO_TEXT,
-            &Attrs::new().family(Family::Monospace),
-            Shaping::Advanced,
-            None,
-        );
-        text_buffer.shape_until_scroll(&mut font_system, false);
 
         Ok(Self {
             instance,
@@ -170,6 +164,10 @@ impl Renderer {
     }
 
     /// Reconfigure the swapchain and reshape the text buffer for `new_size`.
+    ///
+    /// The grid itself stays fixed at its M2a 24×80 dimensions — this just
+    /// updates the renderer's idea of the surface and the wrap width
+    /// cosmic-text uses for line layout.
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width == 0 || new_size.height == 0 {
             return;
@@ -183,20 +181,39 @@ impl Renderer {
             Some(new_size.width as f32),
             Some(new_size.height as f32),
         );
-        self.text_buffer
-            .shape_until_scroll(&mut self.font_system, false);
     }
 
-    /// Acquire the next surface frame and paint the hello string.
-    pub fn render(&mut self) -> Result<()> {
-        // Centre horizontally, place the baseline ~1/3 down.
-        let line_w = self
-            .text_buffer
-            .layout_runs()
-            .next()
-            .map_or(0.0, |run| run.line_w);
-        let surface_size = PhysicalSize::new(self.surface_config.width, self.surface_config.height);
-        let (left, top) = compute_hello_position(surface_size, (line_w, LINE_HEIGHT));
+    /// Acquire the next surface frame and paint `grid`.
+    ///
+    /// Rebuilds the cosmic-text buffer from the grid's rows, shapes it,
+    /// then prepares + submits a single draw call. Errors from glyphon /
+    /// wgpu propagate; transient swapchain states (Outdated/Suboptimal/
+    /// Lost/Timeout/Occluded) are recovered in-place via `request_redraw`.
+    pub fn render(&mut self, grid: &Grid) -> Result<()> {
+        // 1. Build the frame text from the grid. One char per cell, rows
+        //    separated by '\n'. We include trailing spaces — colour-aware
+        //    rendering arrives in M2c and will replace this with per-cell
+        //    spans, so trimming now would only have to be reversed.
+        let (rows, cols) = grid.dimensions();
+        let mut text = String::with_capacity(rows as usize * (cols as usize + 1));
+        for (i, row) in grid.iter_rows().enumerate() {
+            if i > 0 {
+                text.push('\n');
+            }
+            for cell in row {
+                text.push(cell.ch);
+            }
+        }
+
+        self.text_buffer.set_text(
+            &mut self.font_system,
+            &text,
+            &Attrs::new().family(Family::Monospace),
+            Shaping::Advanced,
+            None,
+        );
+        self.text_buffer
+            .shape_until_scroll(&mut self.font_system, false);
 
         self.viewport.update(
             &self.queue,
@@ -215,11 +232,11 @@ impl Renderer {
                 &self.viewport,
                 [TextArea {
                     buffer: &self.text_buffer,
-                    left,
-                    top,
+                    left: TEXT_INSET,
+                    top: TEXT_INSET,
                     scale: 1.0,
                     bounds: TextBounds::default(),
-                    default_color: Color::rgb(0xE6, 0xED, 0xF3),
+                    default_color: FG_COLOR,
                     custom_glyphs: &[],
                 }],
                 &mut self.swash_cache,
@@ -290,70 +307,16 @@ impl Renderer {
 
 // COVERAGE: GPU-bound paths (Renderer::new / resize / render) require a
 // real wgpu surface and can't run under cargo test without a display.
-// Coverage here comes from compute_hello_position + constant assertions
-// only; the GPU code is exercised manually via `cargo run`.
+// Coverage here is limited to the published colour and metric constants;
+// the GPU code is exercised manually via `cargo run`.
+//
+// The M1 `compute_hello_position` helper and its tests were intentionally
+// removed in M2a: the renderer no longer paints a single centred string,
+// so the helper has no callers and tests would have locked in dead
+// behaviour.
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn size(w: u32, h: u32) -> PhysicalSize<u32> {
-        PhysicalSize::new(w, h)
-    }
-
-    #[test]
-    fn centred_horizontally_when_text_fits() {
-        let (left, top) = compute_hello_position(size(1024, 600), (200.0, 20.0));
-        assert!((left - 412.0).abs() < f32::EPSILON, "got left={left}");
-        assert!((top - 200.0).abs() < f32::EPSILON, "got top={top}");
-    }
-
-    #[test]
-    fn left_clamped_to_zero_when_text_wider_than_surface() {
-        // A 100px-wide window with 400px-wide text would otherwise yield
-        // left = -150.0 → clamp to 0.0.
-        let (left, top) = compute_hello_position(size(100, 300), (400.0, 20.0));
-        assert!(left.abs() < f32::EPSILON, "left should clamp to 0, got {left}");
-        assert!((top - 100.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn handles_zero_text_width() {
-        let (left, top) = compute_hello_position(size(800, 600), (0.0, 0.0));
-        assert!((left - 400.0).abs() < f32::EPSILON);
-        assert!((top - 200.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn handles_one_by_one_surface() {
-        // Pathological tiny surface — just confirms no panic and the clamp
-        // still applies.
-        let (left, top) = compute_hello_position(size(1, 1), (10.0, 20.0));
-        assert!(left.abs() < f32::EPSILON);
-        assert!((top - (1.0 / 3.0)).abs() < 1e-6);
-    }
-
-    #[test]
-    fn handles_tall_narrow_surface() {
-        let (left, top) = compute_hello_position(size(40, 4_000), (20.0, 20.0));
-        assert!((left - 10.0).abs() < f32::EPSILON);
-        assert!((top - (4_000.0 / 3.0)).abs() < 1e-3);
-    }
-
-    #[test]
-    fn handles_wide_short_surface() {
-        let (left, top) = compute_hello_position(size(4_000, 40), (200.0, 20.0));
-        assert!((left - 1_900.0).abs() < f32::EPSILON);
-        assert!((top - (40.0 / 3.0)).abs() < 1e-3);
-    }
-
-    #[test]
-    fn ignores_text_height_for_now() {
-        // text_extent.1 is currently unused; confirm two heights yield the
-        // same position so future changes show up as test failures.
-        let a = compute_hello_position(size(800, 600), (300.0, 10.0));
-        let b = compute_hello_position(size(800, 600), (300.0, 9_999.0));
-        assert_eq!(a, b);
-    }
 
     #[test]
     #[allow(clippy::assertions_on_constants)]
@@ -367,10 +330,14 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::assertions_on_constants, clippy::const_is_empty)]
+    #[allow(clippy::assertions_on_constants)]
     fn font_metrics_constants_are_consistent() {
+        // Line height must accommodate the font size, otherwise rows would
+        // collide vertically.
         assert!(FONT_SIZE > 0.0);
         assert!(LINE_HEIGHT >= FONT_SIZE);
-        assert!(!HELLO_TEXT.is_empty());
+        // Inset must be non-negative — a negative value would push the
+        // first row out of the surface.
+        assert!(TEXT_INSET >= 0.0);
     }
 }
