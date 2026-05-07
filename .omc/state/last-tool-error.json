@@ -1,7 +1,0 @@
-{
-  "tool_name": "mcp__gx__create_node",
-  "tool_input_preview": "{\"projectId\":\"f74b0970-9d9c-4220-8a3e-f32e66f3daf2\",\"type\":\"insight\",\"title\":\"Zero-config AI is the wedge\",\"content\":\"test\"}",
-  "error": "Failed query: insert into \"nodes\" (\"id\", \"project_id\", \"type\", \"title\", \"content\", \"priority\", \"embedding\", \"archived_at\", \"created_at\", \"updated_at\") values (default, $1, $2, $3, $4, $5, default, default, default, default) returning \"id\", \"project_id\", \"type\", \"title\", \"content\", \"priority\", \"archived_at\", \"created_at\", \"updated_at\"\nparams: f74b0970-9d9c-4220-8a3e-f32e66f3daf2,insight,Zero-config AI is the wedge,test,later",
-  "timestamp": "2026-05-07T10:55:03.062Z",
-  "retry_count": 4
-}
