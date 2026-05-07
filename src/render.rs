@@ -287,3 +287,88 @@ impl Renderer {
         Ok(())
     }
 }
+
+// COVERAGE: GPU-bound paths (Renderer::new / resize / render) require a
+// real wgpu surface and can't run under cargo test without a display.
+// Coverage here comes from compute_hello_position + constant assertions
+// only; the GPU code is exercised manually via `cargo run`.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn size(w: u32, h: u32) -> PhysicalSize<u32> {
+        PhysicalSize::new(w, h)
+    }
+
+    #[test]
+    fn centred_horizontally_when_text_fits() {
+        let (left, top) = compute_hello_position(size(1024, 600), (200.0, 20.0));
+        assert!((left - 412.0).abs() < f32::EPSILON, "got left={left}");
+        assert!((top - 200.0).abs() < f32::EPSILON, "got top={top}");
+    }
+
+    #[test]
+    fn left_clamped_to_zero_when_text_wider_than_surface() {
+        // A 100px-wide window with 400px-wide text would otherwise yield
+        // left = -150.0 → clamp to 0.0.
+        let (left, top) = compute_hello_position(size(100, 300), (400.0, 20.0));
+        assert!(left.abs() < f32::EPSILON, "left should clamp to 0, got {left}");
+        assert!((top - 100.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn handles_zero_text_width() {
+        let (left, top) = compute_hello_position(size(800, 600), (0.0, 0.0));
+        assert!((left - 400.0).abs() < f32::EPSILON);
+        assert!((top - 200.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn handles_one_by_one_surface() {
+        // Pathological tiny surface — just confirms no panic and the clamp
+        // still applies.
+        let (left, top) = compute_hello_position(size(1, 1), (10.0, 20.0));
+        assert!(left.abs() < f32::EPSILON);
+        assert!((top - (1.0 / 3.0)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn handles_tall_narrow_surface() {
+        let (left, top) = compute_hello_position(size(40, 4_000), (20.0, 20.0));
+        assert!((left - 10.0).abs() < f32::EPSILON);
+        assert!((top - (4_000.0 / 3.0)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn handles_wide_short_surface() {
+        let (left, top) = compute_hello_position(size(4_000, 40), (200.0, 20.0));
+        assert!((left - 1_900.0).abs() < f32::EPSILON);
+        assert!((top - (40.0 / 3.0)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn ignores_text_height_for_now() {
+        // text_extent.1 is currently unused; confirm two heights yield the
+        // same position so future changes show up as test failures.
+        let a = compute_hello_position(size(800, 600), (300.0, 10.0));
+        let b = compute_hello_position(size(800, 600), (300.0, 9_999.0));
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn background_constant_is_opaque_dark() {
+        // Sanity-check the published colour constant so later style changes
+        // are intentional rather than accidental.
+        assert!((BACKGROUND.a - 1.0).abs() < f64::EPSILON);
+        assert!(BACKGROUND.r < 0.2);
+        assert!(BACKGROUND.g < 0.2);
+        assert!(BACKGROUND.b < 0.2);
+    }
+
+    #[test]
+    fn font_metrics_constants_are_consistent() {
+        assert!(FONT_SIZE > 0.0);
+        assert!(LINE_HEIGHT >= FONT_SIZE);
+        assert!(!HELLO_TEXT.is_empty());
+    }
+}
