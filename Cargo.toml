@@ -16,10 +16,12 @@ path = "src/main.rs"
 [dependencies]
 # Window + GPU
 winit = "0.30"
-wgpu = "23"
+wgpu = "29"
+pollster = "0.4"
 
-# Text shaping / fonts
-cosmic-text = "0.12"
+# Text shaping / fonts (versions chosen to match glyphon 0.11)
+cosmic-text = "0.18"
+glyphon = "0.11"
 swash = "0.2"
 fontdb = "0.23"
 
