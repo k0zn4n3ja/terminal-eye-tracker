@@ -29,6 +29,16 @@ cargo build --release
 cargo run
 ```
 
+## Test Coverage
+
+Run coverage locally inside the nix-shell:
+
+```bash
+./scripts/coverage.sh
+```
+
+This generates an HTML report at `target/llvm-cov/html/index.html`. We target ≥80% line coverage overall, with higher coverage on pure logic modules and lower on GPU/window-binding code.
+
 ## Project Roadmap
 
 See [DESIGN.md](DESIGN.md) for detailed milestones and acceptance criteria, from the current scaffold (M0) through frontier features (M8+).
