@@ -38,6 +38,26 @@ const BACKGROUND: wgpu::Color = wgpu::Color {
     a: 1.0,
 };
 
+/// Pure helper: compute the top-left pixel position of the hello string.
+///
+/// The renderer paints the string centred horizontally, with its top edge at
+/// roughly one third of the surface height. Extracted so the math is unit-
+/// testable without a GPU; the live `render` path forwards
+/// `(line_w, LINE_HEIGHT)` from `cosmic-text`'s shaped layout.
+///
+/// `text_extent` is `(width, height)` in pixels; only `width` is used today
+/// but `height` is accepted so M2's grid renderer can vertically centre
+/// without changing the signature.
+pub(crate) fn compute_hello_position(
+    surface: PhysicalSize<u32>,
+    text_extent: (f32, f32),
+) -> (f32, f32) {
+    let (line_w, _line_h) = text_extent;
+    let left = ((surface.width as f32 - line_w) / 2.0).max(0.0);
+    let top = surface.height as f32 / 3.0;
+    (left, top)
+}
+
 /// Owns the wgpu pipeline and the cosmic-text/glyphon stack used to paint a
 /// single frame.
 ///
@@ -175,8 +195,8 @@ impl Renderer {
             .layout_runs()
             .next()
             .map_or(0.0, |run| run.line_w);
-        let left = ((self.surface_config.width as f32 - line_w) / 2.0).max(0.0);
-        let top = self.surface_config.height as f32 / 3.0;
+        let surface_size = PhysicalSize::new(self.surface_config.width, self.surface_config.height);
+        let (left, top) = compute_hello_position(surface_size, (line_w, LINE_HEIGHT));
 
         self.viewport.update(
             &self.queue,
