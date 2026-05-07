@@ -356,6 +356,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::assertions_on_constants)]
     fn background_constant_is_opaque_dark() {
         // Sanity-check the published colour constant so later style changes
         // are intentional rather than accidental.
@@ -366,6 +367,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::assertions_on_constants, clippy::const_is_empty)]
     fn font_metrics_constants_are_consistent() {
         assert!(FONT_SIZE > 0.0);
         assert!(LINE_HEIGHT >= FONT_SIZE);
