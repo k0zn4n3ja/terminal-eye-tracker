@@ -37,7 +37,7 @@ Run coverage locally inside the nix-shell:
 ./scripts/coverage.sh
 ```
 
-This generates an HTML report at `target/llvm-cov/html/index.html`. We target ≥80% line coverage overall, with higher coverage on pure logic modules and lower on GPU/window-binding code.
+This generates an HTML report at `target/llvm-cov/html/index.html`. No overall coverage gate is enforced: pure-logic modules (currently `config.rs`, later `parser`/`grid`/`block`/`llm`) are tested aggressively; GPU/window-binding code in `render.rs` and `app.rs` is dogfood-tested until a headless-GPU fixture is worth the maintenance cost (likely M3+).
 
 ## Project Roadmap
 
