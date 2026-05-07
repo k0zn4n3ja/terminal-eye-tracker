@@ -1,0 +1,170 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1778145664050,
+  "projectRoot": "/home/nixdt1/Repos/vectorise/tmux_eye_tracking",
+  "techStack": {
+    "languages": [
+      {
+        "name": "Python",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "pyproject.toml"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "pytest",
+        "version": null,
+        "category": "testing"
+      }
+    ],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": "pytest",
+    "lintCommand": "ruff check",
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "bin",
+      "tests"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "bin": {
+      "path": "bin",
+      "purpose": "Executable scripts",
+      "fileCount": 1,
+      "lastAccessed": 1778145664045,
+      "keyFiles": [
+        "tmux-eyes-toggle"
+      ]
+    },
+    "build": {
+      "path": "build",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1778145664046,
+      "keyFiles": []
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1778145664046,
+      "keyFiles": [
+        "tmux-eyes"
+      ]
+    },
+    "rs": {
+      "path": "rs",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1778145664047,
+      "keyFiles": [
+        "Cargo.lock",
+        "Cargo.toml"
+      ]
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 5,
+      "lastAccessed": 1778145664049,
+      "keyFiles": [
+        "__init__.py",
+        "test_classifier.py",
+        "test_tmux_io.py",
+        "test_vision.py",
+        "test_wezterm_io.py"
+      ]
+    },
+    "tmux_eyes": {
+      "path": "tmux_eyes",
+      "purpose": null,
+      "fileCount": 10,
+      "lastAccessed": 1778145664049,
+      "keyFiles": [
+        "__init__.py",
+        "__main__.py",
+        "backend.py",
+        "camera.py",
+        "classifier.py"
+      ]
+    },
+    "rs/src": {
+      "path": "rs/src",
+      "purpose": "Source code",
+      "fileCount": 8,
+      "lastAccessed": 1778145664050,
+      "keyFiles": [
+        "backend.rs",
+        "camera.rs",
+        "classifier.rs"
+      ]
+    },
+    "rs/tests": {
+      "path": "rs/tests",
+      "purpose": "Test files",
+      "fileCount": 3,
+      "lastAccessed": 1778145664050,
+      "keyFiles": [
+        "classifier_test.rs",
+        "multiplexer_test.rs",
+        "vision_test.rs"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "rs/src/vision.rs",
+      "accessCount": 6,
+      "lastAccessed": 1778151761831,
+      "type": "file"
+    },
+    {
+      "path": "rs/Cargo.toml",
+      "accessCount": 4,
+      "lastAccessed": 1778151761504,
+      "type": "file"
+    },
+    {
+      "path": "sol_arch.md",
+      "accessCount": 2,
+      "lastAccessed": 1778151735112,
+      "type": "file"
+    },
+    {
+      "path": "rs/src/classifier.rs",
+      "accessCount": 1,
+      "lastAccessed": 1778151707318,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 1,
+      "lastAccessed": 1778151735013,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

@@ -1,0 +1,79 @@
+{
+  "updatedAt": "2026-05-07T11:03:06.515Z",
+  "missions": [
+    {
+      "id": "session:c9bc4cd3-1c68-4d45-819e-6af05c3a21f4:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-05-07T11:01:21.963Z",
+      "updatedAt": "2026-05-07T11:03:06.515Z",
+      "status": "done",
+      "workerCount": 2,
+      "taskCounts": {
+        "total": 2,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 0,
+        "completed": 2,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "document-specialist:a0c2804",
+          "role": "document-specialist",
+          "ownership": "a0c280411165765da",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-05-07T11:02:19.407Z"
+        },
+        {
+          "name": "architect:a7c8822",
+          "role": "architect",
+          "ownership": "a7c8822b1854e4d67",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-05-07T11:03:06.515Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:a0c280411165765da:2026-05-07T11:01:21.963Z",
+          "at": "2026-05-07T11:01:21.963Z",
+          "kind": "update",
+          "agent": "document-specialist:a0c2804",
+          "detail": "started document-specialist:a0c2804",
+          "sourceKey": "session-start:a0c280411165765da"
+        },
+        {
+          "id": "session-start:a7c8822b1854e4d67:2026-05-07T11:01:34.558Z",
+          "at": "2026-05-07T11:01:34.558Z",
+          "kind": "update",
+          "agent": "architect:a7c8822",
+          "detail": "started architect:a7c8822",
+          "sourceKey": "session-start:a7c8822b1854e4d67"
+        },
+        {
+          "id": "session-stop:a0c280411165765da:2026-05-07T11:02:19.407Z",
+          "at": "2026-05-07T11:02:19.407Z",
+          "kind": "completion",
+          "agent": "document-specialist:a0c2804",
+          "detail": "completed",
+          "sourceKey": "session-stop:a0c280411165765da"
+        },
+        {
+          "id": "session-stop:a7c8822b1854e4d67:2026-05-07T11:03:06.515Z",
+          "at": "2026-05-07T11:03:06.515Z",
+          "kind": "completion",
+          "agent": "architect:a7c8822",
+          "detail": "completed",
+          "sourceKey": "session-stop:a7c8822b1854e4d67"
+        }
+      ]
+    }
+  ]
+}
